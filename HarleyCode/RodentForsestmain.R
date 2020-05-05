@@ -37,8 +37,10 @@
        # ,"Mite.Sp..notID.d.", "Tropical", "Spiny", "Unknown.Mite", "Flea..Ctenocephalides.felis"
        # ,"Xenopsylla.cheopis", "Louse", "Tick"
     #  )
-    ###What do we normalize? Numerical Observations that need normalization
-        #---Currently Not normalizing Probabilities---#
+    ###What variables are we treating as factors and what are we treating as factors and which
+          # are we treating as numbers
+      FactorNames<-c("Site.Code", "DxPCR..Blood.", "Neighborhood.x", "Season", "Alive.at.pickup"
+                     ,"Species", "Sex")
       NumericalNames<-c(
         #Physiology Observations
         "Body.Length","Ear.Length", "Tail.Length", "Foot.Length", "Weight","Wound.Score"
@@ -74,7 +76,7 @@
     ###Load Site Data
       SiteData<-read.csv("..\\..\\Data\\TrapRateLandCover.csv",stringsAsFactors=FALSE)
     ###Load Necropsy Data
-      NecropsyData<-read.csv("..\\..\\Data\\NecropsyData_JAN_2019.csv",stringsAsFactors=FALSE)
+      NecropsyData<-read.csv("..\\..\\Data\\NecropsyData_JAN_2019Modified.csv",stringsAsFactors=FALSE)
     ###Load Chagas Data
       ChagasData<-read.csv("..\\..\\Data\\chagasResults.csv",stringsAsFactors=FALSE)
     ###Colate into rawData
@@ -84,13 +86,17 @@
     
   ##Colate and Trim Data- Trim undesired predictors and combine all data tables into single dataframe
     colatedData<-colateData(rawData,TrimNames)
+    rm(rawData)
   ##Format Data- Set all observations to class or factors
-  ## Numericize Data- Change Values of ordinal data to numerical data
-    ####--Currently changing all non-numeric or na values to 0--###
-    numericalData<-NaNdtoZero(colatedData,NumericalNames)
-    head(numericalData);
-  ## Normalize Data
-    normalizedData<-NormalizeData(numericalData,NumericalNames)           
+    ## Factorize Data
+      factorData<-FactorizeData(colatedData, FactorNames)
+    ## Numericize Data- Change Values of ordinal data to numerical data
+      ####--Currently changing all non-numeric or na values to 0--###
+      numericalData<-NumericizeData(colatedData,NumericalNames)
+      normalizedData<-NormalizeData(numericalData) 
+  ##Combine factor and numericalData
+      merge(ChagasNecropsy,siteDataTrimmed,
+            by="ï..RAT.ID",all="FALSE", sort="FALSE")
   ## PCA Data
                         
 #Random Forest
