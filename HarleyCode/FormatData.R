@@ -14,21 +14,30 @@ colateData <- function(rawData,TrimNames) {
     
     ##Colate siteData into chagasData
       CollatedData<-merge(ChagasNecropsy,siteDataTrimmed,
-                          by="Site.Code",all="TRUE", sort="FALSE")
+                          by="Site.Code",all="FALSE", sort="FALSE")
 return(CollatedData)
 }
 
-NaNdtoZero<-function(colatedData,NaNdtoZeroNames){
-  #Search along each column name
-  for (inames in 1:length(NaNdtoZeroNames)){
-    ColumnName=NaNdtoZeroNames[inames]
-    for (isamp in 1:nrow(colatedData)){
-      if ((!is.numeric(colatedData[isamp,ColumnName]))||is.na(colatedData[isamp,ColumnName])){
-        colatedData[isamp,ColumnName]<-0;
-      }
+NaNdtoZero<-function(colatedData,NumericalNames){
+  #intitialize numericalData
+    CatNames<-c("ï..RAT.ID",NumericalNames)
+    numericalData<-data.frame(matrix(NA,ncol=length(CatNames),nrow=length(colatedData[,1])))
+    colnames(numericalData)<-CatNames;
+    
+  #Isolate and numericize numeric entries
+    for (inames in 1:length(CatNames)){
+      ColumnName=CatNames[inames]
+      numericalData[,ColumnName]=as.numeric(colatedData[,ColumnName])
     }
-  }
-  return(colatedData)
+  #Assign 0 to NA values (all values that were NA from collating or non-numeric in excel table)
+  #for (isamp in 1:nrow(colatedData)){
+  # if (is.na(colatedData[isamp,ColumnName])){
+  #    colatedData[isamp,ColumnName]<-0;
+  #  }
+  #merge colatedData into numerical Data
+    numericalData<-merge(colatedData,numericalData,
+                          by="ï..RAT.ID",all.y=TRUE)
+  return(numericalData)
 }
 NormalizeData<-function(numericalData,NormalizeNames){
   for (inames in 1:length(NormalizeNames)){

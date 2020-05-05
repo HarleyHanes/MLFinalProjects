@@ -39,19 +39,19 @@
     #  )
     ###What do we normalize? Numerical Observations that need normalization
         #---Currently Not normalizing Probabilities---#
-      NormalizeNames<-c(
+      NumericalNames<-c(
         #Physiology Observations
         "Body.Length","Ear.Length", "Tail.Length", "Foot.Length", "Weight","Wound.Score"
         #Numbers of Samples
         ,"X..Blood.Samples", "X..Serum.Samples", "X..Lung.Samples", "X..Liver.Samples"
-        ,"X..Spleen.Samples", "X..Kidney.Samples", "X..Tail.Samples", "Ectoparasites.Collected"
-        #Numbers of Parasites Collected
-        ,"Urine.Parasite","Ectoparasites.Collected"
+        ,"X..Spleen.Samples", "X..Kidney.Samples", "X..Tail.Samples"
         #Number of interior abnormalities
         ,"Urine.Parasite","Capillaria.Collected","X..Liver.Cysts.Collected"
         #Number of exctoparasites
         ,"Mite.Sp..notID.d.", "Tropical", "Spiny", "Unknown.Mite", "Flea..Ctenocephalides.felis"
         ,"Xenopsylla.cheopis", "Louse", "Tick"
+        #Trap Rates and Efforts
+        ,"TomTrapEffort", "ShermanTrapEffort", "TrapRate", "NorTRate", "RooTRate", "RatTRate"
         )
     ###Do we perform a PCA?
   ##Preprocessing
@@ -63,7 +63,7 @@
     ###Which random forests are we training/ loading?
 #Load Sources
   ## User Defined Functions
-      source("C:\\Users\\X1\\OneDrive\\Documents\\Student Research\\RodentChagasRisk\\Code\\Harley\\FormatData.R") #colateData, NaNdtoZero
+      source("FormatData.R") #colateData, NaNdtoZero
   ## Packages
 
 #DataSetup
@@ -84,12 +84,13 @@
     
   ##Colate and Trim Data- Trim undesired predictors and combine all data tables into single dataframe
     colatedData<-colateData(rawData,TrimNames)
+  ##Format Data- Set all observations to class or factors
   ## Numericize Data- Change Values of ordinal data to numerical data
     ####--Currently changing all non-numeric or na values to 0--###
-    numericalData<-NaNdtoZero(colatedData,NormalizeNames)
-    head(numericalData)
+    numericalData<-NaNdtoZero(colatedData,NumericalNames)
+    head(numericalData);
   ## Normalize Data
-    normalizedData<-NormalizeData(numericalData,NormalizeNames)           
+    normalizedData<-NormalizeData(numericalData,NumericalNames)           
   ## PCA Data
                         
 #Random Forest
