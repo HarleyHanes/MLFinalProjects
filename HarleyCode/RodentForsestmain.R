@@ -67,8 +67,13 @@
 #Load Sources
   ## User Defined Functions
       source("FormatData.R") #colateData, NaNdtoZero
-      source("ranger")
-      
+      #library(rsample) # data splitting
+      #library(randomForest) # basic implementation
+      library(ranger) # a faster implementation of r
+      library(caret) # an aggregator package for pe
+      library(dplyr)
+      library(broom)
+      #library(h2o) # an extremely fast java-based
   ## Packages
 
 #DataSetup
@@ -105,7 +110,34 @@
       dim(colatedData)
       print('Cleaned Data Dimensions')
       dim(CleanedData)
+      rm(colatedData,NormalizedData,NumericizedData,FactorizedData)
   ## PCA Data
                         
 #Random Forest
-  ##Which
+  ##DataPrep
+  ##Identify DataSet
+  ##Split to Test/Train
+      sample=sample.split(CleanedData$DxPCR..Blood., SplitRatio=.75)
+      train=subset(CleanedData, sample==TRUE)
+      test=subset(Cleaned,sample==FALSE)
+      dim(train)
+      dim(test)
+      
+      Trainedmodel<-ranger(
+        formula = DxPCR..Blood. ~ .,
+        data=CleanedData,
+        num.trees=500,
+        mtry=5,
+        min.node.size=5,
+        sample.fraction=.8,
+        importance='impurity'
+      )
+      Trainedmodel$variable.importance %>%
+        tidy() %>%
+        dplyr::arrange(desc(x)) %>%
+        dplyr::top_n(25) %>%
+        ggplot(aes(reorder(names, x), x)) +
+        geom_col() +
+        coord_flip() +
+        ggtitle("Top 25 important variables")
+      
