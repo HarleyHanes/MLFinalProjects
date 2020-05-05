@@ -18,40 +18,65 @@ colateData <- function(rawData,TrimNames) {
 return(CollatedData)
 }
 
-NaNdtoZero<-function(colatedData,NumericalNames){
-  #intitialize numericalData
-    CatNames<-c("ï..RAT.ID",NumericalNames)
-    numericalData<-data.frame(matrix(NA,ncol=length(CatNames),nrow=length(colatedData[,1])))
-    colnames(numericalData)<-CatNames;
-    
-  #Isolate and numericize numeric entries
-    for (inames in 1:length(CatNames)){
-      ColumnName=CatNames[inames]
-      numericalData[,ColumnName]=as.numeric(colatedData[,ColumnName])
-    }
-  #Assign 0 to NA values (all values that were NA from collating or non-numeric in excel table)
-  #for (isamp in 1:nrow(colatedData)){
-  # if (is.na(colatedData[isamp,ColumnName])){
-  #    colatedData[isamp,ColumnName]<-0;
-  #  }
-  #merge colatedData into numerical Data
-    numericalData<-merge(colatedData,numericalData,
-                          by="ï..RAT.ID",all.y=TRUE)
-  return(numericalData)
+
+###-----------------------------Factorize Data Function---------------------------------------
+FactorizeData<-function(colatedData,FactorNames){
+  FactorizedData=colatedData[ , (names(colatedData) %in% FactorNames)]
+  FactorizedData[] <- lapply(FactorizedData, function(x) if(!is.factor(x)) as.factor(x) else x)
+  return(FactorizedData)
 }
-NormalizeData<-function(numericalData,NormalizeNames){
-  for (inames in 1:length(NormalizeNames)){
+
+
+###----------------------------Numericize Data Function---------------------------------------
+NumericizeData<-function(colatedData,NumericalNames,NaNPolicy){
+  NumericizedData=colatedData[,(names(colatedData) %in% NumericalNames)]
+  NumericizedData[] <- lapply(NumericizedData, function(x) if(!is.numeric(x)) as.numeric(x) else x)
+  NumericizedData$ï..RAT.ID=as.factor(NumericizedData$ï..RAT.ID)
+  if (NaNPolicy=="Remove"){
+    NumericizedData=na.omit(NumericizedData)
+  } else if (NaNPolicy=='Keep'){
+    
+  }
+  return(NumericizedData)
+}
+
+
+
+
+###----------------------------Normalize Data Function---------------------------------------
+NormalizeData<-function(NumericalData,NormalizeNames){
+  NormalizedData=NumericalData[,(names(NumericalData) %in% NormalizeNames)]
+  for (inames in 2:length(NormalizeNames)){#Start at 2 so RatID isn't normalized
     ColumnName=NormalizeNames[inames]
     #Scale
-    numericalData[,ColumnName]<-scale(numericalData[,ColumnName],scale= var(numericalData[,ColumnName]))
+    NormalizedData[,ColumnName]<-scale(NumericalData[,ColumnName],center=TRUE,scale=TRUE)
+    #Convert back to numeric
+    NormalizedData[,ColumnName]<-as.numeric(NormalizedData[,ColumnName])
     #Check Mean
-    if (!(mean(numericalData[,ColumnName])==0)){
-      stop("Mean not 0")
-    }
+    #if (!(mean(NumericalData[,ColumnName])==0)){
+    #  warning("Mean not 0")
+    #}
     #Check Var
-    if (!(var(numericalData[,ColumnName])==1)){
-      stop("Mean not 1")
-    }
+    #if (!(var(NumericalData[,ColumnName])==1)){
+    #  warning("variance not 1")
+    #}
   }
+  return(NormalizedData)
+}
+
+PostDataStatistics<-function(data){
+  cat('\n\n----------------------DATA HEAD-----------------------\n')
+  
+  print(head(data))
+  
+  cat('\n----------------------DATA ClASSES-----------------------\n')
+  print(sapply(data,class))
+  
+  
+  cat('\n----------------------DATA SUMMARY-----------------------\n')
+  
+  print(summary(data))
+  
+
   
 }

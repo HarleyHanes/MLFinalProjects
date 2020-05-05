@@ -3,7 +3,7 @@
   ##Author: Harley Hanes, 4/29/20
 #Executive Control
   ##Set Directory
-    rm()
+  rm(list=ls())
     setwd("C:/Users/X1/OneDrive/Documents/Student Research/RodentChagasRisk/MLFinalProjects/HarleyCode")
   ##Datasetup
     ###What observations do we trim?
@@ -39,19 +39,20 @@
     #  )
     ###What variables are we treating as factors and what are we treating as factors and which
           # are we treating as numbers
-      FactorNames<-c("Site.Code", "DxPCR..Blood.", "Neighborhood.x", "Season", "Alive.at.pickup"
-                     ,"Species", "Sex")
-      NumericalNames<-c(
+      FactorNames<-c("ï..RAT.ID"
+        ,"Site.Code", "DxPCR..Blood.", "Neighborhood.x", "Season", "Alive.at.pickup"
+        ,"Species", "Sex")
+      NumericalNames<-c("ï..RAT.ID"
         #Physiology Observations
-        "Body.Length","Ear.Length", "Tail.Length", "Foot.Length", "Weight","Wound.Score"
+        ,"Body.Length","Ear.Length", "Tail.Length", "Foot.Length", "Weight","Wound.Score"
         #Numbers of Samples
-        ,"X..Blood.Samples", "X..Serum.Samples", "X..Lung.Samples", "X..Liver.Samples"
-        ,"X..Spleen.Samples", "X..Kidney.Samples", "X..Tail.Samples"
+        #,"X..Blood.Samples", "X..Serum.Samples", "X..Lung.Samples", "X..Liver.Samples"
+        #,"X..Spleen.Samples", "X..Kidney.Samples", "X..Tail.Samples"
         #Number of interior abnormalities
-        ,"Urine.Parasite","Capillaria.Collected","X..Liver.Cysts.Collected"
+        #,"Urine.Parasite","Capillaria.Collected","X..Liver.Cysts.Collected"
         #Number of exctoparasites
-        ,"Mite.Sp..notID.d.", "Tropical", "Spiny", "Unknown.Mite", "Flea..Ctenocephalides.felis"
-        ,"Xenopsylla.cheopis", "Louse", "Tick"
+        #,"Mite.Sp..notID.d.", "Tropical", "Spiny", "Unknown.Mite", "Flea..Ctenocephalides.felis"
+        #,"Xenopsylla.cheopis", "Louse", "Tick"
         #Trap Rates and Efforts
         ,"TomTrapEffort", "ShermanTrapEffort", "TrapRate", "NorTRate", "RooTRate", "RatTRate"
         )
@@ -66,6 +67,8 @@
 #Load Sources
   ## User Defined Functions
       source("FormatData.R") #colateData, NaNdtoZero
+      source("ranger")
+      
   ## Packages
 
 #DataSetup
@@ -89,14 +92,19 @@
     rm(rawData)
   ##Format Data- Set all observations to class or factors
     ## Factorize Data
-      factorData<-FactorizeData(colatedData, FactorNames)
+      FactorizedData<-FactorizeData(colatedData, FactorNames)
     ## Numericize Data- Change Values of ordinal data to numerical data
       ####--Currently changing all non-numeric or na values to 0--###
-      numericalData<-NumericizeData(colatedData,NumericalNames)
-      normalizedData<-NormalizeData(numericalData) 
+      NumericizedData<-NumericizeData(colatedData,NumericalNames,"Remove")
+      NormalizedData<-NormalizeData(NumericizedData,NumericalNames) 
   ##Combine factor and numericalData
-      merge(ChagasNecropsy,siteDataTrimmed,
+      CleanedData<-merge(FactorizedData,NormalizedData,
             by="ï..RAT.ID",all="FALSE", sort="FALSE")
+      PostDataStatistics(CleanedData)
+      print('Colated Data Dimensions')
+      dim(colatedData)
+      print('Cleaned Data Dimensions')
+      dim(CleanedData)
   ## PCA Data
                         
 #Random Forest
