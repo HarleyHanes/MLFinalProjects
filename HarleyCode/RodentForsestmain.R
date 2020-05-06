@@ -27,7 +27,8 @@
             ,"Bartonella.Species..from.flea.", "Sample..", "O..bacoti"
             ,"L..echidnina", "L..nuttalli", "H..glasgowi", "X.cheopis", "C..felis", "Louse.1", "Cannot.ID"
           ),
-          chagas=c("Dx.PCR..Heart.")
+          chagas=c("Dx.PCR..Heart."),
+          veg=c()
       )
     ###What na/nd  observations to we change to 0
       #NaNdtoZeroNames=c(
@@ -40,14 +41,14 @@
     ###What variables are we treating as factors and what are we treating as factors and which
           # are we treating as numbers
       FactorNames<-c("ï..RAT.ID"
-        ,"Site.Code", "DxPCR..Blood.", "Neighborhood.x", "Season", "Alive.at.pickup"
+        ,"DxPCR..Blood.", "Neighborhood.x", "Season", "Alive.at.pickup"
         ,"Species", "Sex")
       NumericalNames<-c("ï..RAT.ID"
         #Physiology Observations
         ,"Body.Length","Ear.Length", "Tail.Length", "Foot.Length", "Weight","Wound.Score"
         #Numbers of Samples
-        #,"X..Blood.Samples", "X..Serum.Samples", "X..Lung.Samples", "X..Liver.Samples"
-        #,"X..Spleen.Samples", "X..Kidney.Samples", "X..Tail.Samples"
+        ,"X..Blood.Samples", "X..Serum.Samples", "X..Lung.Samples", "X..Liver.Samples"
+        ,"X..Spleen.Samples", "X..Kidney.Samples", "X..Tail.Samples"
         #Number of interior abnormalities
         #,"Urine.Parasite","Capillaria.Collected","X..Liver.Cysts.Collected"
         #Number of exctoparasites
@@ -55,6 +56,11 @@
         #,"Xenopsylla.cheopis", "Louse", "Tick"
         #Trap Rates and Efforts
         ,"TomTrapEffort", "ShermanTrapEffort", "TrapRate", "NorTRate", "RooTRate", "RatTRate"
+        #Number of Rodents form each species captured per site
+        ,"Norway", "Roof", "Cotton", "Mus", "Other.Mice", "RICE"
+        #Ground Composition
+        ,"Total",  "Grass.cover", "Urban.surface", "Structures","Canopy.cover"
+        
         )
     ###Do we perform a PCA?
   ##Preprocessing
@@ -67,12 +73,13 @@
 #Load Sources
   ## User Defined Functions
       source("FormatData.R") #colateData, NaNdtoZero
-      #library(rsample) # data splitting
+      library(rsample) # data splitting
       #library(randomForest) # basic implementation
       library(ranger) # a faster implementation of r
-      library(caret) # an aggregator package for pe
-      library(dplyr)
-      library(broom)
+      library(e1071) #Used for confusion matrix
+      #library(caret) # an aggregator package for pe
+      #library(dplyr)
+      #library(broom)
       #library(h2o) # an extremely fast java-based
   ## Packages
 
@@ -87,10 +94,12 @@
       NecropsyData<-read.csv("..\\..\\Data\\NecropsyData_JAN_2019Modified.csv",stringsAsFactors=FALSE)
     ###Load Chagas Data
       ChagasData<-read.csv("..\\..\\Data\\chagasResults.csv",stringsAsFactors=FALSE)
+    ###Load Vegitation+ Data
+      VegitationData<-LoadVegData()
     ###Colate into rawData
-      rawData<-list(site=SiteData,necropsy=NecropsyData,chagas=ChagasData)
+      rawData<-list(site=SiteData,necropsy=NecropsyData,chagas=ChagasData,veg=VegitationData)
     ###Remove non-list data files from workspace
-      rm(SiteData,NecropsyData,ChagasData)
+      rm(SiteData,NecropsyData,ChagasData,VegitationData)
     
   ##Colate and Trim Data- Trim undesired predictors and combine all data tables into single dataframe
     colatedData<-colateData(rawData,TrimNames)
@@ -117,21 +126,34 @@
   ##DataPrep
   ##Identify DataSet
   ##Split to Test/Train
-      sample=sample.split(CleanedData$DxPCR..Blood., SplitRatio=.75)
-      train=subset(CleanedData, sample==TRUE)
-      test=subset(Cleaned,sample==FALSE)
-      dim(train)
-      dim(test)
       
+      dataSplit <- initial_split(CleanedData[,2:ncol(CleanedData)],prop=.7)
+      trainData <- training(dataSplit)
+      testData <- testing(dataSplit)
+      dim(trainData)
+      dim(testData)
+      
+      #Train a classification model
       Trainedmodel<-ranger(
         formula = DxPCR..Blood. ~ .,
-        data=CleanedData,
+        data=trainData,
         num.trees=500,
         mtry=5,
+        write.forest=TRUE,
+        #treetype='classification', #'regression'
         min.node.size=5,
         sample.fraction=.8,
         importance='impurity'
       )
+      
+      Prediction<-predict(Trainedmodel,
+                          testData,
+                          type='response')
+      
+      
+      
+      
+      
       Trainedmodel$variable.importance %>%
         tidy() %>%
         dplyr::arrange(desc(x)) %>%
@@ -140,4 +162,6 @@
         geom_col() +
         coord_flip() +
         ggtitle("Top 25 important variables")
+      
+      confusionMatrix(Prediction$predictions,testData$DxPCR..Blood.)
       

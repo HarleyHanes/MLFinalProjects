@@ -7,15 +7,70 @@ colateData <- function(rawData,TrimNames) {
     necropsyDataTrimmed=rawData$necropsy[ , !(names(rawData$necropsy) %in% TrimNames$necropsy)];
   #Trim Chagas Data
     chagasDataTrimmed=rawData$chagas[ , !(names(rawData$chagas) %in% TrimNames$chagas)];
+  #Trim Chagas Data
+    vegDataTrimmed=rawData$veg[ , !(names(rawData$veg) %in% TrimNames$veg)];
   #Colate
     ##Colate necrospyData into chagasData
       ChagasNecropsy<-merge(chagasDataTrimmed,necropsyDataTrimmed,
             by="ï..RAT.ID")
+    ##Colate site and VegData
+      VegSite<-merge(vegDataTrimmed,siteDataTrimmed[, c("Site.Code", setdiff(names(siteDataTrimmed),names(vegDataTrimmed)))], by="Site.Code", all=FALSE)
     
     ##Colate siteData into chagasData
-      CollatedData<-merge(ChagasNecropsy,siteDataTrimmed,
-                          by="Site.Code",all="FALSE", sort="FALSE")
+      CollatedData<-merge(ChagasNecropsy,VegSite[, c("Site.Code", setdiff(names(VegSite),names(ChagasNecropsy)))],
+                          by="Site.Code",all=FALSE, sort=FALSE)
 return(CollatedData)
+}
+
+
+#-------------------------------------Get and Format Vegitation Data-------------------------------
+LoadVegData<-function(){
+  rm(list=ls())
+  setwd("C:/Users/X1/OneDrive/Documents/Student Research/RodentChagasRisk/MLFinalProjects/HarleyCode")
+  VegData<-read.csv("..\\..\\Data\\EnvironmentalVariablesTrimmed.csv",stringsAsFactors=FALSE)
+  #Remove Year and Season
+  VegData<-VegData[,-c(2,3,4)]
+  FactorCols=1:2;
+  NumCols=3:ncol(VegData)
+  #Change to numerics and factors
+  VegData[,FactorCols]<-lapply(VegData[,FactorCols],factor)
+  VegData[,NumCols]<-lapply(VegData[,NumCols],as.numeric)
+  #Get a Vector of all Site Codes
+  SiteCodes=levels(VegData[,1])
+  #For loop through all Site Codes
+  for (isite in 1:length(SiteCodes)){
+    #Identify site
+    site=SiteCodes[isite]
+    #Prep dataframes used in for loop
+    siteObserved=FALSE
+    #For loop through all observations to record all observations for a given site
+    for (iobs in 1:nrow(VegData)){
+      if (site==VegData[iobs,1]){
+        #Record VegData Obesrvation
+        if (siteObserved==FALSE){
+          SiteData<-VegData[iobs,]
+        }else{
+          rbind(SiteData,VegData[iobs,])
+        }
+        #Remove observation from Vegdata to speed up for looping
+        #VegData<-VegData[-iobs,]
+        siteObserved==TRUE #Assume observations are sorted by site.
+      } else if (siteObserved==TRUE){
+        #break after first observation that doesn't match
+        #break
+      }
+    }
+    #Average numerical observations
+    AverageSite<-SiteData[1,]
+    AverageSite[,NumCols]<-colMeans(SiteData[,NumCols])
+    if (isite==1){
+      AverageVegData<-AverageSite
+    } else{
+      AverageVegData[isite,]<-AverageSite
+    }
+  }
+  #Clear Datasets with missing values
+  AverageVegData<-AverageVegData[ , colSums(is.na(AverageVegData)) == 0]
 }
 
 
@@ -33,11 +88,12 @@ NumericizeData<-function(colatedData,NumericalNames,NaNPolicy){
   NumericizedData[] <- lapply(NumericizedData, function(x) if(!is.numeric(x)) as.numeric(x) else x)
   NumericizedData$ï..RAT.ID=as.factor(NumericizedData$ï..RAT.ID)
   if (NaNPolicy=="Remove"){
-    NumericizedData=na.omit(NumericizedData)
+    NumericizedData2=na.omit(NumericizedData)
+    #print(nrow(NumericizedData)-nrow(NumericizedData2), " observations were removed")
   } else if (NaNPolicy=='Keep'){
     
   }
-  return(NumericizedData)
+  return(NumericizedData2)
 }
 
 
