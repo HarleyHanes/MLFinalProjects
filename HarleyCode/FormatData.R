@@ -1,3 +1,105 @@
+#--------------------------------------------Load Data-----------------------------------------------
+#Primary Function Call for getting data
+LoadData<-function(){
+  #What Observations are we trimming
+    TrimNames<-list(
+      site=c("OBJECTID_12.."
+             #CNH Study
+             ,"CNH.Study"
+             #Trap 
+             ,"Trap.type"
+      ),
+      necropsy=c(
+        #Trap Data
+        "Trap.type","Trap.Number","CNH.Study"
+        #Duplicate Site Information
+        ,"Count", "Relabel", "CNH.Study Neighborhood",  "Address"
+        #Collection Dates
+        ,"Day.Collected","Date.Collected"
+        #Bugged Data
+        ,"Ear.Length"
+        #Remove % Coverages
+        ,"X.Canopy",   "X.Grass",   "X.green"
+        #Female Only Observations
+        ,"Parous..females.only.",  "X..Embryos"
+        #Juvenile/ Adult (Determined just from body length (Ghersi2020))
+        ,"Juvenile..1.yes.0.N.","Sexually.Mature..1.yes.0.no."
+        #Internal Samples
+        ,"X..Blood.Samples",  "X..Serum.Samples",  "X..Lung.Samples",   "X..Liver.Samples",  "X..Spleen.Samples"
+        ,"X..Kidney.Samples", "X..Tail.Samples", "Fecal.Oral","X..Liver.Cysts.Collected"
+        #Observations on whether Data was collected
+        ,"Ectoparasites.Collected", "Urine.Collected", "Embyros.Collected..0.no..1.yes."
+        ,"Liver.Cysts.Observed..0.no.1.yes.", "ddRAD.data","Capillaria.Observed"
+        #Internal Necropsy with lots of missing values
+        ,"Lung.Parasites", "X..Lung.Parasites", "Other.Collected","Notes","Serum"
+        #Ectoparasites with lots of missing values
+        ,"Bartonella.Species..from.flea.", "Sample..", "O..bacoti"
+        ,"L..echidnina", "L..nuttalli", "H..glasgowi", "X.cheopis", "C..felis", "Louse.1", "Cannot.ID"
+        #Number of interior abnormalities
+        ,"Urine.Parasite","Capillaria.Collected"
+        #Number of exctoparasites
+        ,"Mite.Sp..notID.d.", "Tropical", "Spiny", "Unknown.Mite", "Flea..Ctenocephalides.felis"
+        ,"Xenopsylla.cheopis", "Louse", "Tick"
+      ),
+      chagas=c("Dx.PCR..Heart."),
+      veg=c()
+    )
+  #What variables are we treating as factors (and what are we treating as factors and which
+  # are we treating as numbers)e
+    FactorNames<-c("ï..RAT.ID"
+                 ,"Site.Code","DxPCR..Blood.", "Neighborhood", "Season", "Alive.at.pickup"
+                 ,"Species", "Sex","Alive.at.pickup.")
+  #DataSetup
+    ##Load data
+      ###Load Site Data
+        SiteData<-read.csv("..\\..\\Data\\TrapRateLandCover.csv",stringsAsFactors=FALSE)
+      ###Load Necropsy Data
+        NecropsyData<-read.csv("..\\..\\Data\\NecropsyData_JAN_2019Modified.csv",stringsAsFactors=FALSE)
+      ###Load Chagas Data
+        ChagasData<-read.csv("..\\..\\Data\\chagasResults.csv",stringsAsFactors=FALSE)
+      ###Load Vegitation+ Data
+        VegitationData<-LoadVegData()
+      ###Colate into rawData
+        rawData<-list(site=SiteData,necropsy=NecropsyData,chagas=ChagasData,veg=VegitationData)
+      ###Remove non-list data files from workspace
+        rm(SiteData,NecropsyData,ChagasData,VegitationData)
+    
+    ##Colate and Trim Data- Trim undesired predictors and combine all data tables into single dataframe
+      colatedData<-colateData(rawData,TrimNames)
+      rm(rawData)
+    ##Format Data- Set all observations to class or factors
+    ## Factorize Data
+      FactorizedData<-FactorizeData(colatedData, FactorNames)
+    ## Numericize Data- Change Values of ordinal data to numerical data
+      ####--Currently changing all non-numeric or na values to 0--###
+    
+      NumericalNames<-c("ï..RAT.ID", names(colatedData)[!(names(colatedData) %in% FactorNames)])
+      NumericizedData<-NumericizeData(colatedData,NumericalNames,"Remove")
+      NormalizedData<-NormalizeData(NumericizedData,NumericalNames) 
+    ##Combine factor and numericalData
+      CleanedData<-merge(FactorizedData,NormalizedData,
+                       by="ï..RAT.ID",all="FALSE", sort="FALSE")
+    ## Trim site code and Rat ID
+      CleanedData<-CleanedData[,!(names(CleanedData) %in% c("ï..RAT.ID","Site.Code"))]
+    ##Post statistics
+      PostDataStatistics(CleanedData)
+      print('Colated Data Dimensions:')
+      cat(dim(colatedData))
+      print('Cleaned Data Dimensions:')
+      cat(dim(CleanedData))
+      rm(colatedData,NormalizedData,NumericizedData,FactorizedData)
+      #dataResults<-list('data'=CleanedData)
+    ##PCA Data
+      #if (applyPCA==TRUE)
+  #return(dataResults)
+    return(CleanedData)
+}
+
+
+
+
+
+#--------------------------------------------Colate Data---------------------------------------------
 colateData <- function(rawData,TrimNames) {
 #colateData: Takes the raw data structure and combines into a 
 #            single data frame with all relevant parameters
@@ -87,6 +189,7 @@ NumericizeData<-function(colatedData,NumericalNames,NaNPolicy){
   NumericizedData=colatedData[,(names(colatedData) %in% NumericalNames)]
   NumericizedData[] <- lapply(NumericizedData, function(x) if(!is.numeric(x)) as.numeric(x) else x)
   NumericizedData$ï..RAT.ID=as.factor(NumericizedData$ï..RAT.ID)
+  #NumericizedData$Site.Code=as.factor(colatedData$Site.Code)
   if (NaNPolicy=="Remove"){
     NumericizedData2=na.omit(NumericizedData)
     #print(nrow(NumericizedData)-nrow(NumericizedData2), " observations were removed")
@@ -134,5 +237,21 @@ PostDataStatistics<-function(data){
   print(summary(data))
   
 
+  
+}
+
+#----------------------------------Run PCA------------------------------------r
+runPCA<-function(data){
+  #Transform factors to numerics
+  data[,]<-lapply(data[,],as.numeric)
+  #Get PCA rotation
+  
+  #Apply rotation to data
+  
+  
+  #save to PCAresult list
+  
+  return(PCAresult)
+  
   
 }
