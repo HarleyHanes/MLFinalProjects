@@ -44,11 +44,13 @@
     testData <- testing(dataSplit)
     dim(trainData)
     dim(testData)
+    splitData<-list(testData,trainData)
+    names(splitData)<-c('test','train')
       
   ##Train a classification model
     Trainedmodel<-ranger(
       formula = DxPCR..Blood. ~ .,
-      data=trainData,
+      data=splitData$train,
       num.trees=500,
       mtry=5,
       write.forest=TRUE,
@@ -59,15 +61,46 @@
     )
       
   ##Test prediction
-    testResult<-predict(Trainedmodel,
-                          testData,
-                          type='response')
-    r<-confusionMatrix(testResult$predictions,testData$DxPCR..Blood.)
-    treeSettings<-data.frame("minDepth"=1,"maxDepth"=151)
-    results<-PlotTreeDepth(trainData,testData,treeSettings)
+    #testResult<-predict(Trainedmodel,
+    #                      splitData$test,
+    #                      type='response')
+    #r<-confusionMatrix(testResult$predictions,testData$DxPCR..Blood.)
+    #treeSettings<-data.frame("minDepth"=1,"maxDepth"=151)
+    #results<-PlotTreeDepth(splitData$train,treeSettings)
     #plot(results$vecDepth,results$Sensitivity, type="l")
-    ggplot(results, aes(vecDepth,Specificity))
-    plot(results$vecDepth,results$Specificity, type="l")
+    #ggplot(results, aes(vecDepth,Specificity))
+    #plot(results$vecDepth,results$Specificity, type="l")
+    
+    
+    #Find optimal settings
+      errortype<-c('specificity','sensitivity','totalError')
+      hyperGrid<-SearchHyperParameters(data,errortype)
+    #Make Scatter plot of Sensitivity and Specificity
+      plot(hyperGrid$sensitivity[-which.max(hyperGrid$sensitivity)],
+           hyperGrid$specificity[-which.max(hyperGrid$sensitivity)],
+           pch=16,
+           col='black',
+           ylim=c(min(hyperGrid$specificity), max(hyperGrid$specificity)),
+           xlim=c(min(hyperGrid$sensitivity), max(hyperGrid$sensitivity)),
+           xlab='Sensitivity',
+           ylab='Specificity')
+        points(hyperGrid$sensitivity[which.max(hyperGrid$sensitivity)],
+             hyperGrid$specificity[which.max(hyperGrid$sensitivity)],
+             col='blue',
+             pch=16)
+        points(hyperGrid$sensitivity[which.max(hyperGrid$totalError)],
+               hyperGrid$specificity[which.max(hyperGrid$totalError)],
+               col='red',
+               pch=16)
+        
+           #cex=2,)
+      
+      #pairs(~sensitivity+specificity,data=hyperGrid)
+      
+    #Correlation Matrix 
+      var(scale(hyperGrid))
+    #
+    #print(parameterSearch$bestParameter$error)
       #Trainedmodel$variable.importance %>%
       #  tidy() %>%
       #  dplyr::arrange(desc(x)) %>%

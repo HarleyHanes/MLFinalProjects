@@ -31,3 +31,64 @@ PlotTreeDepth<-function(trainData,testData,treeSettings){
   results<-data.frame(vecDepth,Sensitivity,Specificity)
  return(results)
 }
+
+SearchHyperParameters<-function(data,errortype){
+  
+  #Define hypergrid to search on
+  hyper_grid <- expand.grid(
+    mtry = round(seq(1, length(names(data))-1, length= 10)),
+    node_size = round(seq(1, round(sqrt(nrow(data))), length=10)),
+    sample_size = c(.55, .632, .70, .80)
+  )
+  
+  #Apply model on hypergrid
+  for(i in 1:nrow(hyper_grid)) {
+    #Split data
+    dataSplit <- initial_split(data,prop=hyper_grid$sample_size[i])
+    trainData <- training(dataSplit)
+    testData <- testing(dataSplit)
+    # train model
+    model <- ranger(
+      formula = DxPCR..Blood. ~.,
+      data = trainData,
+      num.trees = 500,
+      mtry = hyper_grid$mtry[i],
+      min.node.size = hyper_grid$node_size[i],
+      seed = 123,
+      importance='permutation'
+    )
+    #Test model
+    p<-predict(model,
+                testData,
+                type='response')
+    # add OOB error to grid
+    for (j in 1:length(errortype)){
+      hyper_grid[i,3+j] <- GetError(errortype[j],p$predictions,testData$DxPCR..Blood.)
+    }
+  }
+  names(hyper_grid)<-c(names(hyper_grid[,1:3]),errortype)
+  #bestParameter<-hyper_grid[,which.min(hyper_grid$error)]
+  #OptimalResults<-list(hyper_grid,bestParameter)
+  return(hyper_grid)
+  
+}
+
+
+
+
+GetError<-function(errortype,prediction,true){
+  Confusion<-confusionMatrix(prediction,true)
+    if (errortype=="specificity"){
+      #Error[i]<-sum(!testResult$predictions==testData$DxPCR..Blood.)/norw(testResult)
+      error<-Confusion$byClass[1]
+    } else if (errortype=='sensitivity'){
+      error<-Confusion$byClass[2]
+    } else if (errortype=='totalError'){
+      error<-sum(!(prediction==true))/length(true)
+    }
+  
+}
+
+weightInfection<-function(infection){
+  
+}
