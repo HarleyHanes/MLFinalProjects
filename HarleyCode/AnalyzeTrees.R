@@ -32,7 +32,7 @@ PlotTreeDepth<-function(trainData,testData,treeSettings){
  return(results)
 }
 
-SearchHyperParameters<-function(data,errortype,applyWeight){
+SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
   
   #Define hypergrid to search on
   hyper_grid <- expand.grid(
@@ -47,6 +47,8 @@ SearchHyperParameters<-function(data,errortype,applyWeight){
     dataSplit <- initial_split(data,prop=hyper_grid$sample_size[i])
     trainData <- training(dataSplit)
     testData <- testing(dataSplit)
+    weights<-c(1/sum(trainData$DxPCR..Blood.==0),1/sum(trainData$DxPCR..Blood.==1))*
+      .5*(1/sum(trainData$DxPCR..Blood.==0)+1/sum(trainData$DxPCR..Blood.==1))
     # train model
     if (applyWeight==TRUE){
       model <- ranger(
@@ -57,8 +59,7 @@ SearchHyperParameters<-function(data,errortype,applyWeight){
         min.node.size = hyper_grid$node_size[i],
         seed = 123,
         importance='impurity',
-        class.weights=c(1/sum(data$DxPCR..Blood.==0),1/sum(data$DxPCR..Blood.==0))*
-          .5*(1/sum(data$DxPCR..Blood.==0)+1/sum(data$DxPCR..Blood.==0))
+        class.weights=weights
       )
     } else {
       model <- ranger(
@@ -104,7 +105,7 @@ GetError<-function(errortype,prediction,true){
   
 }
 
-GetImpurity<-function(data,optimalModel){
+GetImpurity<-function(data,optimalModel,importanceType){
   #Split
   dataSplit <- initial_split(data,prop=optimalModel$sample_size)
   trainData <- training(dataSplit)
@@ -122,7 +123,7 @@ GetImpurity<-function(data,optimalModel){
     write.forest=TRUE,
     #treetype='classification', #'regression'
     min.node.size=optimalModel$node_size,
-    importance='impurity'
+    importance= importanceType
   )
   #Assess
   Trainedmodel$variable.importance %>%
