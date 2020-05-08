@@ -32,7 +32,7 @@ PlotTreeDepth<-function(trainData,testData,treeSettings){
  return(results)
 }
 
-SearchHyperParameters<-function(data,errortype){
+SearchHyperParameters<-function(data,errortype,applyWeight){
   
   #Define hypergrid to search on
   hyper_grid <- expand.grid(
@@ -48,15 +48,30 @@ SearchHyperParameters<-function(data,errortype){
     trainData <- training(dataSplit)
     testData <- testing(dataSplit)
     # train model
-    model <- ranger(
-      formula = DxPCR..Blood. ~.,
-      data = trainData,
-      num.trees = 500,
-      mtry = hyper_grid$mtry[i],
-      min.node.size = hyper_grid$node_size[i],
-      seed = 123,
-      importance='permutation'
-    )
+    if (applyWeight==TRUE){
+      model <- ranger(
+        formula = DxPCR..Blood. ~.,
+        data = trainData,
+        num.trees = 500,
+        mtry = hyper_grid$mtry[i],
+        min.node.size = hyper_grid$node_size[i],
+        seed = 123,
+        importance='impurity',
+        class.weights=c(1/sum(data$DxPCR..Blood.==0),1/sum(data$DxPCR..Blood.==0))*
+          .5*(1/sum(data$DxPCR..Blood.==0)+1/sum(data$DxPCR..Blood.==0))
+      )
+    } else {
+      model <- ranger(
+        formula = DxPCR..Blood. ~.,
+        data = trainData,
+        num.trees = 500,
+        mtry = hyper_grid$mtry[i],
+        min.node.size = hyper_grid$node_size[i],
+        seed = 123,
+        importance='impurity'
+      )
+      
+    }
     #Test model
     p<-predict(model,
                 testData,
@@ -89,6 +104,38 @@ GetError<-function(errortype,prediction,true){
   
 }
 
-weightInfection<-function(infection){
+GetImpurity<-function(data,optimalModel){
+  #Split
+  dataSplit <- initial_split(data,prop=optimalModel$sample_size)
+  trainData <- training(dataSplit)
+  testData <- testing(dataSplit)
+  dim(trainData)
+  dim(testData)
+  splitData<-list(testData,trainData)
+  names(splitData)<-c('test','train')
+  #Train
+  Trainedmodel<-ranger(
+    formula = DxPCR..Blood. ~ .,
+    data=splitData$train,
+    num.trees=500,
+    mtry=optimalModel$mtry,
+    write.forest=TRUE,
+    #treetype='classification', #'regression'
+    min.node.size=optimalModel$node_size,
+    importance='impurity'
+  )
+  #Assess
+  Trainedmodel$variable.importance %>%
+    tidy() %>%
+    dplyr::arrange(desc(x)) %>%
+    dplyr::top_n(15) %>%
+    ggplot(aes(reorder(names, x), x)) +
+    geom_col() +
+    coord_flip()+
+    labs(y='Decrease in Impurity',
+         x='Predictor') +
+    ggtitle("Top 15 important variables")
+  
+  return(sort(Trainedmodel$variable.importance, decreasing=TRUE))
   
 }

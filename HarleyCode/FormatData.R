@@ -243,15 +243,14 @@ PostDataStatistics<-function(data){
 #----------------------------------Run PCA------------------------------------r
 runPCA<-function(data){
   #Transform factors to numerics
-  data[,]<-lapply(data[,],as.numeric)
-  #Get PCA rotation
-  
-  #Apply rotation to data
-  
+  numData<-data
+  numData[,sapply(data,class)=="factor"]<-lapply(data[,sapply(data,class)=="factor"],as.numeric)
+  #Get PCA data
+  pcaData<-prcomp(numData[,!(names(numData) %in% c('DxPCR..Blood.'))], center=TRUE, scale.=TRUE)
   
   #save to PCAresult list
   
-  return(PCAresult)
+  return(pcaData)
   
   
 }

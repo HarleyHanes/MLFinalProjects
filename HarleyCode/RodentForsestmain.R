@@ -7,6 +7,8 @@
     setwd("C:/Users/X1/OneDrive/Documents/Student Research/RodentChagasRisk/MLFinalProjects/HarleyCode")
   ##Data Setup
     ###Do we perform a PCA?
+      applyPCA=TRUE
+      applyWeights=TRUE
   ##Preprocessing
     ###Are we making scatters?
   
@@ -23,8 +25,8 @@
       library(ranger) # a faster implementation of r
       #library(e1071) #Used for confusion matrix
       library(caret) # an aggregator package for pe
-      #library(dplyr)
-      #library(broom)
+      library(dplyr)
+      library(broom)
       #library(h2o) # an extremely fast java-based
   ## Packages
 #Format Data Data
@@ -39,26 +41,26 @@
     
 #Random Forest
   ##Split
-    dataSplit <- initial_split(data,prop=.7)
-    trainData <- training(dataSplit)
-    testData <- testing(dataSplit)
-    dim(trainData)
-    dim(testData)
-    splitData<-list(testData,trainData)
-    names(splitData)<-c('test','train')
+    #dataSplit <- initial_split(data,prop=.7)
+    #trainData <- training(dataSplit)
+    #testData <- testing(dataSplit)
+    #dim(trainData)
+    #dim(testData)
+    #splitData<-list(testData,trainData)
+    #names(splitData)<-c('test','train')
       
   ##Train a classification model
-    Trainedmodel<-ranger(
-      formula = DxPCR..Blood. ~ .,
-      data=splitData$train,
-      num.trees=500,
-      mtry=5,
-      write.forest=TRUE,
+    #Trainedmodel<-ranger(
+     # formula = DxPCR..Blood. ~ .,
+     # data=splitData$train,
+    #  num.trees=500,
+    #  mtry=5,
+    #  write.forest=TRUE,
       #treetype='classification', #'regression'
-      min.node.size=5,
-      sample.fraction=.8,
-      importance='impurity'
-    )
+    #  min.node.size=5,
+    #  sample.fraction=.8,
+    #  importance='impurity'
+   # )
       
   ##Test prediction
     #testResult<-predict(Trainedmodel,
@@ -74,7 +76,23 @@
     
     #Find optimal settings
       errortype<-c('specificity','sensitivity','totalError')
-      hyperGrid<-SearchHyperParameters(data,errortype)
+      #applyWeights=TRUE
+      if (applyPCA==TRUE){
+        PCAresult<-runPCA(data)
+        PCAdata<-as.data.frame(PCAresult$x)
+        PCAdata$DxPCR..Blood.<-data$DxPCR..Blood.
+        
+        #Tune
+        hyperGrid<-SearchHyperParameters(PCAdata,errortype,applyWeights)
+        hyperGrid<-SearchHyperParameters(PCAdata[,(names(PCAdata) %in% c('DxPCR..Blood.',topNames))],errortype,applyWeights)
+        #Get Optimal Model
+        optimalModel<-hyperGrid[which.max(hyperGrid$sensitivity),]
+        #Get Impurity plot
+        GetImpurity(PCAdata,optimalModel)
+      } else {
+        hyperGrid<-SearchHyperParameters(data,errortype,applyWeights)
+      }
+        
     #Make Scatter plot of Sensitivity and Specificity
       plot(hyperGrid$sensitivity[-which.max(hyperGrid$sensitivity)],
            hyperGrid$specificity[-which.max(hyperGrid$sensitivity)],
@@ -88,26 +106,16 @@
              hyperGrid$specificity[which.max(hyperGrid$sensitivity)],
              col='blue',
              pch=16)
-        points(hyperGrid$sensitivity[which.max(hyperGrid$totalError)],
-               hyperGrid$specificity[which.max(hyperGrid$totalError)],
+        points(hyperGrid$sensitivity[which.min(hyperGrid$totalError)],
+               hyperGrid$specificity[which.min(hyperGrid$totalError)],
                col='red',
                pch=16)
         
-           #cex=2,)
-      
-      #pairs(~sensitivity+specificity,data=hyperGrid)
-      
+        #legend(legend=c("Sample Points", "Maximum Sensitivity","Minimum Error"),
+         #      col=c("black","red", "blue"), lty=1:2, cex=0.8,title="Point Types")
     #Correlation Matrix 
       var(scale(hyperGrid))
-    #
     #print(parameterSearch$bestParameter$error)
-      #Trainedmodel$variable.importance %>%
-      #  tidy() %>%
-      #  dplyr::arrange(desc(x)) %>%
-      #  dplyr::top_n(25) %>%
-      #  ggplot(aes(reorder(names, x), x)) +
-      #  geom_col() +
-      #  coord_flip() +
-      #  ggtitle("Top 25 important variables")
+
 
       
