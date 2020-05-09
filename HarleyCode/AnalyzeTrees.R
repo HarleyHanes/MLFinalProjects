@@ -38,7 +38,7 @@ SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
   hyper_grid <- expand.grid(
     mtry = round(seq(1, length(names(data))-1, length= 10)),
     node_size = round(seq(1, round(sqrt(nrow(data))), length=10)),
-    sample_size = c(.55, .632, .70, .80)
+    sample_size = c(.70)
   )
   
   #Apply model on hypergrid
@@ -89,9 +89,6 @@ SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
   
 }
 
-
-
-
 GetError<-function(errortype,prediction,true){
   Confusion<-confusionMatrix(prediction,true)
     if (errortype=="specificity"){
@@ -105,7 +102,7 @@ GetError<-function(errortype,prediction,true){
   
 }
 
-GetImpurity<-function(data,optimalModel,importanceType){
+GetImpurity<-function(data,optimalModel,importanceType,plotBool){
   #Split
   dataSplit <- initial_split(data,prop=optimalModel$sample_size)
   trainData <- training(dataSplit)
@@ -125,17 +122,20 @@ GetImpurity<-function(data,optimalModel,importanceType){
     min.node.size=optimalModel$node_size,
     importance= importanceType
   )
-  #Assess
-  Trainedmodel$variable.importance %>%
-    tidy() %>%
-    dplyr::arrange(desc(x)) %>%
-    dplyr::top_n(15) %>%
-    ggplot(aes(reorder(names, x), x)) +
-    geom_col() +
-    coord_flip()+
-    labs(y='Decrease in Impurity',
-         x='Predictor') +
-    ggtitle("Top 15 important variables")
+  if (plotBool==TRUE){
+    #Plot Rankings
+    Trainedmodel$variable.importance %>%
+      tidy() %>%
+      dplyr::arrange(desc(x)) %>%
+      dplyr::top_n(15) %>%
+      ggplot(aes(reorder(names, x), x)) +
+      geom_col() +
+      coord_flip()+
+      labs(y='Decrease in Impurity',
+           x='Predictor') +
+      ggtitle("Top 15 important variables")
+  }
+  
   
   return(sort(Trainedmodel$variable.importance, decreasing=TRUE))
   

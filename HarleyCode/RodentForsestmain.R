@@ -14,18 +14,20 @@
       applyWeights=TRUE
   ##-------------------------------Random Forest
     ### What model are we running?
-      modelType<-'Tuning'
-      if (modelType=='Tuning'){
+      modelType<-'Dimension Reduction'
+      if (modelType=='Tune Forest'){
         ###Tuning
         importanceType='permutation'#How do we measure importance at node splits- permutation or impurity
         errortype<-c('specificity','sensitivity','totalError') #What are our metrics of error (must be included)
         
-      }else if(modelType=='Optimal PCA'){
+      }else if(modelType=='Dimension Reduction'){
         ###Optimal PCA
         importanceType='permutation'#How do we measure importance at node splits- permutation or impurity
         errortype<-c('specificity','sensitivity','totalError') #What are our metrics of error (must be included)
+        reductionStep<-.5 #What lower proportion of observations do we cut (rounding up)
+        reductionError<-errortype[1] #What error value do we use to select optimal model
       }
-#------------------------------------------Load Functions and Packages--------------------------------------------
+#-----------------------------------------------Load Functions and Packages--------------------------------------------
   ##-----------------------User Defined Functions
       source("FormatData.R") #colateData, NaNdtoZero
       source("AnalyzeTrees.R")
@@ -38,7 +40,7 @@
       library(dplyr)
       library(broom)
       #library(h2o) # an extremely fast java-based
-#---------------------------------------------------Load and Format Data-------------------------------------
+#-----------------------------------------------Load and Format Data-------------------------------------
     ## Load Data
       data=LoadData()
     ##PCA Data
@@ -47,9 +49,9 @@
         PCAdata<-as.data.frame(PCAresult$x)
         PCAdata$DxPCR..Blood.<-data$DxPCR..Blood.
       }
-#------------------------------------------------------Tune Forest
-    
-    
+      
+#-----------------------------------------------Tune Forest---------------------------------
+if (modelType=='Tune Forest'){
     #Find optimal settings
       #applyWeights=TRUE
       if (applyPCA==TRUE){
@@ -85,8 +87,62 @@
         #legend(legend=c("Sample Points", "Maximum Sensitivity","Minimum Error"),
          #      col=c("black","red", "blue"), lty=1:2, cex=0.8,title="Point Types")
     #Correlation Matrix 
-      var(scale(hyperGrid))
+      #var(scale(hyperGrid))
     #print(parameterSearch$bestParameter$error)
+} 
+#-----------------------------------------------Dimension Reduction-------------------------------
+if (modelType== 'Dimension Reduction'){
+  ##--------------------------------Get Reduced Models
+    ###Setup models dataframe
+    modelsNames<-c("mtry", "node_size", "sample_size",errortype, "num_Predictors")
+    models<-data.frame(matrix(ncol=length(modelsNames),nrow=0))
+    names(models)<-modelsNames
+    ### Setup dataReduced
+    if (applyPCA==TRUE){
+      dataReduced<-PCAdata
+    } else {
+      dataReduced<-data
+    }
+    #Get number of predictors
+    pPredictors<-ncol(dataReduced)-1
+  while (pPredictors>2){
+  ##-------------------------------Get Optimal Model
+    ###Get Hyper Grid
+    hyperGrid<-SearchHyperParameters(dataReduced,errortype,applyWeights,importanceType)
+    ###Extract Optimum
+    optimalModel<-hyperGrid[which.max(hyperGrid[,names(hyperGrid) %in% reductionError]),]
+    optimalModel$num_Predictors<-pPredictors
+  ##-------------------------------Record Model Statistics
+    ###Record Hyper_grid parameter Settings and error
+    models<-rbind(models,optimalModel)
+  ##-------------------------------Get New predictors
+    ###Get ranked old predictors
+    rankedPredictors<-GetImpurity(dataReduced,optimalModel,importanceType,plotBool<-FALSE)
+    ###Find how many Names to get
+    numNames<-ceiling(length(rankedPredictors)*reductionStep)
+    ## Make sure the number of new predictors is at least 
+    if (pPredictors==numNames){
+      numNames<-numNames-1
+    }
+    topNames<-names(rankedPredictors[1:numNames])
+  ##-------------------------------Remove Observations
+  dataReduced<-dataReduced[,names(dataReduced) %in% c('DxPCR..Blood.',topNames)]
+  pPredictors<-numNames
+  pPredictors
+  #rm(rankedPredictors,numNames,optimalModel,hyperGrid,topNames)
+  }
+  ##------------------------------Plot Errors vs. # Principal Components
+      ggplot(models,aes(x=num_Predictors))+
+      geom_line(aes(y=totalError),color='red')+
+      geom_line(aes(y=sensitivity),color='blue')+
+      geom_line(aes(y=specificity),color='green')+
+      labs(x='Number of Predictors',y='%')+
+      scale_fill_discrete(breaks=c("Total Error","Sensitivity","Specificity"))
+    
+  
+  ##------------------------------Get Biplot
+}        
+
 
 #--------------------------------------------Deprecated Code------------------------------------------------
       #Random Forest
