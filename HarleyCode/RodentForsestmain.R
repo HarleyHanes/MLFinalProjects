@@ -11,21 +11,21 @@
   ##-------------------------------Data Setup
     ###Do we perform a PCA?
       applyPCA=TRUE
-      applyWeights=TRUE
+      applyWeights=FALSE
   ##-------------------------------Random Forest
     ### What model are we running?
       modelType<-'Dimension Reduction'
       if (modelType=='Tune Forest'){
         ###Tuning
-        importanceType='permutation'#How do we measure importance at node splits- permutation or impurity
+        importanceType='impurity'#How do we measure importance at node splits- permutation or impurity
         errortype<-c('specificity','sensitivity','totalError') #What are our metrics of error (must be included)
-        
+      
       }else if(modelType=='Dimension Reduction'){
         ###Optimal PCA
-        importanceType='permutation'#How do we measure importance at node splits- permutation or impurity
+        importanceType='impurity'#How do we measure importance at node splits- permutation or impurity
         errortype<-c('specificity','sensitivity','totalError') #What are our metrics of error (must be included)
-        reductionStep<-.5 #What lower proportion of observations do we cut (rounding up)
-        reductionError<-errortype[1] #What error value do we use to select optimal model
+        reductionStep<-.8 #What upper proportion of observations do we keep (rounding up)
+        reductionError<-'totalError'#What error value do we use to select optimal model
       }
 #-----------------------------------------------Load Functions and Packages--------------------------------------------
   ##-----------------------User Defined Functions
@@ -97,20 +97,27 @@ if (modelType== 'Dimension Reduction'){
     modelsNames<-c("mtry", "node_size", "sample_size",errortype, "num_Predictors")
     models<-data.frame(matrix(ncol=length(modelsNames),nrow=0))
     names(models)<-modelsNames
+    ###Setup Predictors dataframe
     ### Setup dataReduced
     if (applyPCA==TRUE){
       dataReduced<-PCAdata
+      predictors<-list(names(PCAdata[,!(names(PCAdata) %in% c("DxPCR..Blood."))]))
     } else {
       dataReduced<-data
+      #predictors<-ls(names(data[,!(names(data) %in% "DxPCR..Blood.")]))
     }
     #Get number of predictors
     pPredictors<-ncol(dataReduced)-1
-  while (pPredictors>2){
+  while (pPredictors>1){
   ##-------------------------------Get Optimal Model
     ###Get Hyper Grid
     hyperGrid<-SearchHyperParameters(dataReduced,errortype,applyWeights,importanceType)
     ###Extract Optimum
-    optimalModel<-hyperGrid[which.max(hyperGrid[,names(hyperGrid) %in% reductionError]),]
+    if (reductionError=='totalError'){
+      optimalModel<-hyperGrid[which.min(hyperGrid[,names(hyperGrid) %in% reductionError]),]
+    } else{
+      optimalModel<-hyperGrid[which.max(hyperGrid[,names(hyperGrid) %in% reductionError]),]
+    }
     optimalModel$num_Predictors<-pPredictors
   ##-------------------------------Record Model Statistics
     ###Record Hyper_grid parameter Settings and error
@@ -120,25 +127,31 @@ if (modelType== 'Dimension Reduction'){
     rankedPredictors<-GetImpurity(dataReduced,optimalModel,importanceType,plotBool<-FALSE)
     ###Find how many Names to get
     numNames<-ceiling(length(rankedPredictors)*reductionStep)
+    #numNames<-length(rankedPredictors)-4
     ## Make sure the number of new predictors is at least 
     if (pPredictors==numNames){
       numNames<-numNames-1
     }
     topNames<-names(rankedPredictors[1:numNames])
+    #Save topNames
+    predictors[[length(predictors)+1]]<-topNames
   ##-------------------------------Remove Observations
   dataReduced<-dataReduced[,names(dataReduced) %in% c('DxPCR..Blood.',topNames)]
   pPredictors<-numNames
-  pPredictors
+  print(pPredictors)
   #rm(rankedPredictors,numNames,optimalModel,hyperGrid,topNames)
   }
   ##------------------------------Plot Errors vs. # Principal Components
-      ggplot(models,aes(x=num_Predictors))+
-      geom_line(aes(y=totalError),color='red')+
-      geom_line(aes(y=sensitivity),color='blue')+
-      geom_line(aes(y=specificity),color='green')+
+      
+    ggplot(models)+
+      geom_line(aes(x=num_Predictors,y=totalError*100,color="red"))+
+      geom_line(aes(x=num_Predictors,y=sensitivity*100,color="blue"))+
+      geom_line(aes(x=num_Predictors,y=specificity*100,color="green"))+
       labs(x='Number of Predictors',y='%')+
-      scale_fill_discrete(breaks=c("Total Error","Sensitivity","Specificity"))
-    
+      #scale_color_discrete(name="Error Type",values=c("Total Error"='red',"Sensitivity"='blue',"Specificity"='green'))+
+      scale_color_discrete(name="Error Measure",labels=c("Sensitivity","Specificity","Total Error"))+
+      theme(legend.position = c(0.16, 0.65))+
+      coord_cartesian(xlim = c(2, 66), ylim = c(0, 100))
   
   ##------------------------------Get Biplot
 }        
@@ -147,14 +160,21 @@ if (modelType== 'Dimension Reduction'){
 #--------------------------------------------Deprecated Code------------------------------------------------
       #Random Forest
       ##Split
-      #dataSplit <- initial_split(data,prop=.7)
-      #trainData <- training(dataSplit)
-      #testData <- testing(dataSplit)
-      #dim(trainData)
-      #dim(testData)
-      #splitData<-list(testData,trainData)
-      #names(splitData)<-c('test','train')
-      
+      dataSplit <- initial_split(PCAdata,prop=.7)
+      trainData <- training(dataSplit)
+      testData <- testing(dataSplit)
+      dim(trainData)
+      dim(testData)
+      splitData<-list(testData,trainData)
+      names(splitData)<-c('test','train')
+      treeSettings<-list(minNum=1,maxNum=1100)
+      results<-PlotTreeNumber(trainData,testData,treeSettings) 
+      ggplot(results)+
+        geom_line(aes(x=NumTrees,y=Sensitivity,color='blue'))+
+        geom_line(aes(x=NumTrees,y=Specificity,color='green'))+
+        theme(legend.position = c(0.9, 0.5))+
+        labs(x='Number of Trees',y="%")+
+        scale_color_discrete(name = "Error Type", labels = c("Sensitivity", "Specificity"))
       ##Train a classification model
       #Trainedmodel<-ranger(
       # formula = DxPCR..Blood. ~ .,

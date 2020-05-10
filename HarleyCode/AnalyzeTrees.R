@@ -32,13 +32,46 @@ PlotTreeDepth<-function(trainData,testData,treeSettings){
  return(results)
 }
 
+PlotTreeNumber<-function(trainData,testData,treeSettings){
+  
+  
+  NumTrees=round(seq(treeSettings$minNum, treeSettings$maxNum, length=30))
+  Sensitivity<-c()
+  Specificity<-c()
+  Error<-c()
+  for (i in 1:length(NumTrees)){
+    #Make Forest
+    Trainedmodel<-ranger(
+      formula = DxPCR..Blood. ~ .,
+      data=trainData,
+      num.trees=NumTrees[i],
+      mtry=5,
+      #treetype='classification', #'regression'
+      min.node.size=5,
+      sample.fraction=.8,
+      importance='impurity'
+    )
+    testResult<-predict(Trainedmodel,
+                        testData,
+                        type='response')
+    
+    Confusion<-confusionMatrix(testResult$predictions,testData$DxPCR..Blood.)
+    #Error[i]<-sum(!testResult$predictions==testData$DxPCR..Blood.)/norw(testResult)
+    Sensitivity[i]<-Confusion$byClass[1]
+    Specificity[i]<-Confusion$byClass[2]
+  }
+  #results<-data.frame('vecDepth'<-vecDepth,'Sensitivity'<-Sensitivity, 'Specificity'<-Specificity)
+  results<-data.frame(NumTrees,Sensitivity,Specificity)
+  return(results)
+}
+
 SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
   
   #Define hypergrid to search on
   hyper_grid <- expand.grid(
-    mtry = round(seq(1, length(names(data))-1, length= 10)),
-    node_size = round(seq(1, round(sqrt(nrow(data))), length=10)),
-    sample_size = c(.70)
+    mtry = unique(round((length(names(data))-1)*seq(.2, .8, length= 10))),
+    node_size = unique(round(seq(1, .5*sqrt((nrow(data))), length=10))),
+    sample_size = c(.5, .6, .7, .8)
   )
   
   #Apply model on hypergrid
@@ -47,10 +80,10 @@ SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
     dataSplit <- initial_split(data,prop=hyper_grid$sample_size[i])
     trainData <- training(dataSplit)
     testData <- testing(dataSplit)
-    weights<-c(1/sum(trainData$DxPCR..Blood.==0),1/sum(trainData$DxPCR..Blood.==1))*
-      .5*(1/sum(trainData$DxPCR..Blood.==0)+1/sum(trainData$DxPCR..Blood.==1))
     # train model
     if (applyWeight==TRUE){
+        weights<-c(1/sum(trainData$DxPCR..Blood.==0),1/sum(trainData$DxPCR..Blood.==1))*
+                  .5*(1/sum(trainData$DxPCR..Blood.==0)+1/sum(trainData$DxPCR..Blood.==1))
       model <- ranger(
         formula = DxPCR..Blood. ~.,
         data = trainData,
@@ -58,7 +91,7 @@ SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
         mtry = hyper_grid$mtry[i],
         min.node.size = hyper_grid$node_size[i],
         seed = 123,
-        importance='impurity',
+        importance=importanceType,
         class.weights=weights
       )
     } else {
@@ -69,7 +102,7 @@ SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
         mtry = hyper_grid$mtry[i],
         min.node.size = hyper_grid$node_size[i],
         seed = 123,
-        importance='impurity'
+        importance=importanceType
       )
       
     }
@@ -117,7 +150,7 @@ GetImpurity<-function(data,optimalModel,importanceType,plotBool){
     data=splitData$train,
     num.trees=500,
     mtry=optimalModel$mtry,
-    write.forest=TRUE,
+    write.forest=FALSE,
     #treetype='classification', #'regression'
     min.node.size=optimalModel$node_size,
     importance= importanceType
@@ -131,9 +164,9 @@ GetImpurity<-function(data,optimalModel,importanceType,plotBool){
       ggplot(aes(reorder(names, x), x)) +
       geom_col() +
       coord_flip()+
-      labs(y='Decrease in Impurity',
+      labs(y=paste('Decrease in ',importanceType),
            x='Predictor') +
-      ggtitle("Top 15 important variables")
+      ggtitle("Top 15 Important Predictors")
   }
   
   
