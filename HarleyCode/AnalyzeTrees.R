@@ -173,3 +173,23 @@ GetImpurity<-function(data,optimalModel,importanceType,plotBool){
   return(sort(Trainedmodel$variable.importance, decreasing=TRUE))
   
 }
+
+GetImportanceHist<-function(predictors){
+  #Unlist predictors
+  predVec<-unlist(predictors,use.name=FALSE)
+  #turn into factor
+  predFactor<-as.factor(predVec)
+  #Make levels correct !!!This only works if the first names are ordered correctly!!!!
+  predFactor<-factor(predFactor,levels=unique(predFactor))
+  
+  #Make histogram
+  ggplot(data.frame(predhistfactor), aes(x=predhistfactor)) +
+    geom_bar()+
+    xlab('Principal Component')+
+    ylab('Dimension Reduction Iteration Removed')+
+    scale_x_discrete(limit = c("PC1", "PC5", "PC10","PC15","PC20", "PC25", "PC30","PC35"
+                               ,"PC40", "PC45", "PC50","PC55","PC60", "PC65"))
+  
+  
+  
+}

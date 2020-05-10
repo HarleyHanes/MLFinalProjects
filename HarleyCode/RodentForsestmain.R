@@ -11,7 +11,7 @@
   ##-------------------------------Data Setup
     ###Do we perform a PCA?
       applyPCA=TRUE
-      applyWeights=FALSE
+      applyWeights=TRUE
   ##-------------------------------Random Forest
     ### What model are we running?
       modelType<-'Dimension Reduction'
@@ -150,7 +150,7 @@ if (modelType== 'Dimension Reduction'){
       labs(x='Number of Predictors',y='%')+
       #scale_color_discrete(name="Error Type",values=c("Total Error"='red',"Sensitivity"='blue',"Specificity"='green'))+
       scale_color_discrete(name="Error Measure",labels=c("Sensitivity","Specificity","Total Error"))+
-      theme(legend.position = c(0.16, 0.65))+
+      theme(legend.position = c(0.9, 0.65))+
       coord_cartesian(xlim = c(2, 66), ylim = c(0, 100))
   
   ##------------------------------Get Biplot
