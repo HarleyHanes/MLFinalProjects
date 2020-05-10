@@ -174,22 +174,54 @@ GetImpurity<-function(data,optimalModel,importanceType,plotBool){
   
 }
 
-GetImportanceHist<-function(predictors){
+GetReductionHist<-function(P){
+  #Get Predictor Names[]
+  PredNames<-names(P)
+  #Define empty PredFrame- make nx0 and add each predNames as a new column
+  predFrame<-data.frame(id=1:length(unlist(P[1],use.name=FALSE)))
   #Unlist predictors
-  predVec<-unlist(predictors,use.name=FALSE)
-  #turn into factor
-  predFactor<-as.factor(predVec)
+  for (i in 1:length(PredNames)){
+    #predFrame[,PredNames[i]]<-unlist(P[PredNames[i]],use.name=FALSE)
+    predFrame[,i]<-unlist(P[PredNames[i]],use.name=FALSE)
+  }
+  # Correct Names
+  names(predFrame)<-PredNames
+  #turn into factor to get ordering
+  predTestFactor<-as.factor(predFrame[,1])
+  #Get 1,2,3,4... ordering
+  ordering<-unique(predTestFactor)
   #Make levels correct !!!This only works if the first names are ordered correctly!!!!
-  predFactor<-factor(predFactor,levels=unique(predFactor))
+  for (i in 1:ncol(predFrame)){
+    predFrame[,i]<-factor(predFrame[,i],levels=unique(predTestFactor))
+  }
   
   #Make histogram
-  ggplot(data.frame(predhistfactor), aes(x=predhistfactor)) +
-    geom_bar()+
+  
+  ggplot(predFrame) + 
+    geom_bar(aes(x=predFrame[,2],fill='Weighted, Impurity, Sensitivity'), stat='count')+
+    geom_bar(aes(x=predFrame[,4],fill='Weighted, Permutation, Sensitivity'), stat='count')+
+    geom_bar(aes(x=predFrame[,3],fill='Weighted, Impurity, Total Error'), stat='count')+
+    geom_bar(aes(x=predFrame[,1],fill='Unweighted, Impurity, Total Error'), stat='count')+
+    labs(fill='Dimension Reduction Simulation')+
     xlab('Principal Component')+
     ylab('Dimension Reduction Iteration Removed')+
-    scale_x_discrete(limit = c("PC1", "PC5", "PC10","PC15","PC20", "PC25", "PC30","PC35"
-                               ,"PC40", "PC45", "PC50","PC55","PC60", "PC65"))
-  
+    scale_x_discrete(labels = c("PC1"," ", " ", " ",  
+                               "PC5"," ", " ", " ", " ", 
+                               "PC10"," ", " ", " ", " ", 
+                               "PC15"," ", " ", " ", " ", 
+                               "PC20", " ", " ", " ", " ",
+                               "PC25"," ", " ", " ", " ", 
+                               "PC30"," ", " ", " ", " ", 
+                               "PC35"," ", " ", " ", " ", 
+                               "PC40"," ", " ", " ", " ", 
+                               "PC45", " ", " ", " ", " ",
+                               "PC50"," ", " ", " ", " ", 
+                               "PC55"," ", " ", " ", " ", 
+                               "PC60"," ", " ", " ", " ", 
+                               "PC65"))
+}
+
+PCtoObserveImportanceHist<-function(S){
   
   
 }
