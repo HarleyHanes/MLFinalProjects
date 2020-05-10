@@ -221,7 +221,48 @@ GetReductionHist<-function(P){
                                "PC65"))
 }
 
-PCtoObserveImportanceHist<-function(S){
+PCtoObserveImportanceHist<-function(PCAdata,PCAresults,optimalModel,importanceType,PCAnames,numbers){
+  PCAdata<-PCAdata[,names(PCAdata) %in% c("DxPCR..Blood.",PCAnames)]
+  #Get importance rankings
+  #Split
+  dataSplit <- initial_split(PCAdata,prop=optimalModel$sample_size)
+  trainData <- training(dataSplit)
+  testData <- testing(dataSplit)
+  splitData<-list(testData,trainData)
+  names(splitData)<-c('test','train')
+  #Train
+  Trainedmodel<-ranger(
+    formula = DxPCR..Blood. ~ .,
+    data=splitData$train,
+    num.trees=500,
+    mtry=optimalModel$mtry,
+    write.forest=FALSE,
+    #treetype='classification', #'regression'
+    min.node.size=optimalModel$node_size,
+    importance= importanceType
+  )
+  #Transform PCAdata to true data explained by incldued principal components
+  #as.matrix(PCAdata[,!(names(PCAdata) %in% c("DxPCR..Blood."))]) %*% t(PCAresult$rotation[,numbers])
+  #Rotate importances to predictor axis
+  PredictorImportance<-t(Trainedmodel$variable.importance) %*% t(PCAresult$rotation[,numbers])
+  observationNames<-attr(PredictorImportance,"dimnames")[[1]]
+  PredVec<-PredictorImportance[1:65]
+  names(PredVec)<-observationNames
+  #sort(PredictorImportance, decreasing=TRUE)
+  #transform Predictor Importance back to data frame
+  PredictorFrame<-data.frame(matrix(ncol = 65, nrow = 0))
+  names(PredictorFrame)<-attr(PredictorImportance,"dimnames")[[2]]
+  PredictorFrame[1,]<-PredictorImportance
+  #names(PredictorImportance)<-names(data[,!(names(data) %in% "DxPCR..Blood.")])
   
-  
+  PredVec %>%
+    tidy() %>%
+    dplyr::arrange(desc(abs(x))) %>%
+    dplyr::top_n(15) %>%
+    ggplot(aes(reorder(names, x), x)) +
+    geom_col() +
+    coord_flip()+
+    labs(y=paste('Decrease in ',importanceType),
+         x='Predictor') +
+    ggtitle("Top 15 Important Predictors")
 }
