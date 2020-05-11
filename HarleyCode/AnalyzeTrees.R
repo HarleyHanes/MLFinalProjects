@@ -245,7 +245,7 @@ PCtoObserveImportanceHist<-function(PCAdata,PCAresults,optimalModel,importanceTy
   #as.matrix(PCAdata[,!(names(PCAdata) %in% c("DxPCR..Blood."))]) %*% t(PCAresult$rotation[,numbers])
   #Rotate importances to predictor axis
   PredictorImportance<-t(Trainedmodel$variable.importance) %*% t(PCAresult$rotation[,numbers])
-  observationNames<-attr(PredictorImportance,"dimnames")[[1]]
+  observationNames<-attr(PredictorImportance,"dimnames")[[2]]
   PredVec<-PredictorImportance[1:65]
   names(PredVec)<-observationNames
   #sort(PredictorImportance, decreasing=TRUE)
@@ -266,3 +266,5 @@ PCtoObserveImportanceHist<-function(PCAdata,PCAresults,optimalModel,importanceTy
          x='Predictor') +
     ggtitle("Top 15 Important Predictors")
 }
+
+

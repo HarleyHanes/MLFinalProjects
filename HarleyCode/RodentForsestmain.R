@@ -11,10 +11,10 @@
   ##-------------------------------Data Setup
     ###Do we perform a PCA?
       applyPCA=TRUE
-      applyWeights=TRUE
+      applyWeights=FALSE
   ##-------------------------------Random Forest
     ### What model are we running?
-      modelType<-'Dimension Reduction'
+      modelType<-'Tune Forest'
       if (modelType=='Tune Forest'){
         ###Tuning
         importanceType='impurity'#How do we measure importance at node splits- permutation or impurity
@@ -61,7 +61,7 @@ if (modelType=='Tune Forest'){
         #Get Optimal Model
         optimalModel<-hyperGrid[which.max(hyperGrid$sensitivity),]
         #Get Impurity plot
-        GetImpurity(PCAdata,optimalModel,importanceType)
+        GetImpurity(PCAdata,optimalModel,importanceType,FALSE)
       } else {
         hyperGrid<-SearchHyperParameters(data,errortype,applyWeights,importanceType)
       }
@@ -71,10 +71,10 @@ if (modelType=='Tune Forest'){
            hyperGrid$specificity[-which.max(hyperGrid$sensitivity)],
            pch=16,
            col='black',
-           ylim=c(min(hyperGrid$specificity), max(hyperGrid$specificity)),
-           xlim=c(min(hyperGrid$sensitivity), max(hyperGrid$sensitivity)),
            xlab='Sensitivity',
-           ylab='Specificity')
+           ylab='Specificity',
+           xlim = c(0, .6), 
+           ylim = c(.6, 1))
         points(hyperGrid$sensitivity[which.max(hyperGrid$sensitivity)],
              hyperGrid$specificity[which.max(hyperGrid$sensitivity)],
              col='blue',
@@ -160,21 +160,21 @@ if (modelType== 'Dimension Reduction'){
 #--------------------------------------------Deprecated Code------------------------------------------------
       #Random Forest
       ##Split
-      dataSplit <- initial_split(PCAdata,prop=.7)
-      trainData <- training(dataSplit)
-      testData <- testing(dataSplit)
-      dim(trainData)
-      dim(testData)
-      splitData<-list(testData,trainData)
-      names(splitData)<-c('test','train')
-      treeSettings<-list(minNum=1,maxNum=1100)
-      results<-PlotTreeNumber(trainData,testData,treeSettings) 
-      ggplot(results)+
-        geom_line(aes(x=NumTrees,y=Sensitivity,color='blue'))+
-        geom_line(aes(x=NumTrees,y=Specificity,color='green'))+
-        theme(legend.position = c(0.9, 0.5))+
-        labs(x='Number of Trees',y="%")+
-        scale_color_discrete(name = "Error Type", labels = c("Sensitivity", "Specificity"))
+      #dataSplit <- initial_split(PCAdata,prop=.7)
+      #trainData <- training(dataSplit)
+      #testData <- testing(dataSplit)
+      #dim(trainData)
+      #dim(testData)
+      #splitData<-list(testData,trainData)
+      #names(splitData)<-c('test','train')
+      #treeSettings<-list(minNum=1,maxNum=1100)
+      #results<-PlotTreeNumber(trainData,testData,treeSettings) 
+      #ggplot(results)+
+      #  geom_line(aes(x=NumTrees,y=Sensitivity,color='blue'))+
+      #  geom_line(aes(x=NumTrees,y=Specificity,color='green'))+
+      #  theme(legend.position = c(0.9, 0.5))+
+      #  labs(x='Number of Trees',y="%")+
+      #  scale_color_discrete(name = "Error Type", labels = c("Sensitivity", "Specificity"))
       ##Train a classification model
       #Trainedmodel<-ranger(
       # formula = DxPCR..Blood. ~ .,
