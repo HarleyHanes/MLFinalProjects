@@ -267,4 +267,32 @@ PCtoObserveImportanceHist<-function(PCAdata,PCAresults,optimalModel,importanceTy
     ggtitle("Top 15 Important Predictors")
 }
 
+GetDataSplit<-function(data,pSplit){
+  #Seperate Data into positives and negatives
+  dataPos=data[data$DxPCR..Blood.==1,]
+  dataNeg=data[data$DxPCR..Blood.==0,]
+  
+  #Split positives
+  posSplit <- initial_split(dataPos,pSplit)
+  trainData <- training(posSplit)
+  testData <- testing(posSplit)
+  splitPosData<-list(testData,trainData)
+  names(splitPosData)<-c('test','train')
+  #Split negatives
+  negSplit <- initial_split(dataNeg,pSplit)
+  trainData <- training(negSplit)
+  testData <- testing(negSplit)
+  splitNegData<-list(testData,trainData)
+  names(splitNegData)<-c('test','train')
+  
+  splitData<-splitPosData
+  #Recombine into Test
+  splitData$test<-rbind(splitPosData$test,splitNegData$test)
+  
+  #Recombine into Train
+  splitData$train<-rbind(splitPosData$train,splitNegData$train)
+  
+  return(splitData)
+}
+
 
