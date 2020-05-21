@@ -77,13 +77,15 @@ SearchHyperParameters<-function(data,errortype,applyWeight,importanceType){
   #Apply model on hypergrid
   for(i in 1:nrow(hyper_grid)) {
     #Split data
-    dataSplit <- initial_split(data,prop=hyper_grid$sample_size[i])
-    trainData <- training(dataSplit)
-    testData <- testing(dataSplit)
+    dataSplit <- GetDataSplit(data,hyper_grid$sample_size[i])
+    trainData <- dataSplit$train
+    testData <- dataSplit$test
     # train model
     if (applyWeight==TRUE){
-        weights<-c(1/sum(trainData$DxPCR..Blood.==0),1/sum(trainData$DxPCR..Blood.==1))*
-                  .5*(1/sum(trainData$DxPCR..Blood.==0)+1/sum(trainData$DxPCR..Blood.==1))
+        weights<-c(sum(trainData$DxPCR..Blood.==1),sum(trainData$DxPCR..Blood.==0))
+        weights<-weights/mean(weights)
+        #weights<-c(1/sum(trainData$DxPCR..Blood.==0),1/sum(trainData$DxPCR..Blood.==1))*
+        #          .5*(1/sum(trainData$DxPCR..Blood.==0)+1/sum(trainData$DxPCR..Blood.==1))
       model <- ranger(
         formula = DxPCR..Blood. ~.,
         data = trainData,

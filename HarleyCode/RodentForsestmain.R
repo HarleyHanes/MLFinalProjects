@@ -10,8 +10,8 @@
     setwd("C:/Users/X1/OneDrive/Documents/Student Research/RodentChagasRisk/MLFinalProjects/HarleyCode")
   ##-------------------------------Data Setup
     ###Do we perform a PCA?
-      applyPCA=FALSE
-      applyWeights=FALSE
+      applyPCA=TRUE
+      applyWeights=TRUE
   ##-------------------------------Random Forest
     ### What model are we running?
       modelType<-'Tune Forest'
