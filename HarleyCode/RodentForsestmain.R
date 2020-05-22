@@ -11,7 +11,7 @@
   ##-------------------------------Data Setup
     ###Do we perform a PCA?
       applyPCA=TRUE
-      applyWeights=TRUE
+      applyWeights=FALSE
   ##-------------------------------Random Forest
     ### What model are we running?
       modelType<-'Dimension Reduction'
@@ -25,7 +25,7 @@
         importanceType='impurity'#How do we measure importance at node splits- permutation or impurity
         errortype<-c('specificity','sensitivity','totalError') #What are our metrics of error (must be included)
         reductionStep<-.8 #What upper proportion of observations do we keep (rounding up)
-        reductionError<-'total error'#What error value do we use to select optimal model
+        reductionError<-'totalError'#What error value do we use to select optimal model
       }
 #-----------------------------------------------Load Functions and Packages--------------------------------------------
   ##-----------------------User Defined Functions
