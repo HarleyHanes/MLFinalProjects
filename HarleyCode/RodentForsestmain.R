@@ -22,10 +22,10 @@
       
       }else if(modelType=='Dimension Reduction'){
         ###Optimal PCA
-        importanceType='permutation'#How do we measure importance at node splits- permutation or impurity
+        importanceType='impurity'#How do we measure importance at node splits- permutation or impurity
         errortype<-c('specificity','sensitivity','totalError') #What are our metrics of error (must be included)
         reductionStep<-.8 #What upper proportion of observations do we keep (rounding up)
-        reductionError<-'sensitivity'#What error value do we use to select optimal model
+        reductionError<-'total error'#What error value do we use to select optimal model
       }
 #-----------------------------------------------Load Functions and Packages--------------------------------------------
   ##-----------------------User Defined Functions
