@@ -14,7 +14,7 @@
       applyWeights=TRUE
   ##-------------------------------Random Forest
     ### What model are we running?
-      modelType<-'Tune Forest'
+      modelType<-'Dimension Reduction'
       if (modelType=='Tune Forest'){
         ###Tuning
         importanceType='impurity'#How do we measure importance at node splits- permutation or impurity
