@@ -10,8 +10,8 @@
     setwd("C:/Users/X1/OneDrive/Documents/Student Research/RodentChagasRisk/MLFinalProjects/HarleyCode")
   ##-------------------------------Data Setup
     ###Do we perform a PCA?
-      applyPCA=TRUE
-      applyWeights=FALSE
+      applyPCA=FALSE
+      applyWeights=TRUE
   ##-------------------------------Random Forest
     ### What model are we running?
       modelType<-'Dimension Reduction'
@@ -104,7 +104,7 @@ if (modelType== 'Dimension Reduction'){
       predictors<-list(names(PCAdata[,!(names(PCAdata) %in% c("DxPCR..Blood."))]))
     } else {
       dataReduced<-data
-      #predictors<-ls(names(data[,!(names(data) %in% "DxPCR..Blood.")]))
+      predictors<-list(names(data[,!(names(data) %in% "DxPCR..Blood.")]))
     }
     #Get number of predictors
     pPredictors<-ncol(dataReduced)-1

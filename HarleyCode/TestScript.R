@@ -1,7 +1,9 @@
+source("AnalyzeTrees.R")
 optimalModel<-models[models$num_Predictors==2,]
 PCAnames<-predictors[[18]]
-numbers<-c(33,50)
+numbers<-c(4,33)
 PCtoObserveImportanceHist(PCAdata,PCAresult,optimalModel,importanceType,PCAnames,numbers)
+MakeBiplot(PCAdata,PCAresult,optimalModel,importanceType,PCAnames,numbers)
 
 
 

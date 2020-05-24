@@ -223,39 +223,12 @@ GetReductionHist<-function(P){
                                "PC65"))
 }
 
-PCtoObserveImportanceHist<-function(PCAdata,PCAresults,optimalModel,importanceType,PCAnames,numbers){
-  PCAdata<-PCAdata[,names(PCAdata) %in% c("DxPCR..Blood.",PCAnames)]
-  #Get importance rankings
-  #Split
-  dataSplit <- initial_split(PCAdata,prop=optimalModel$sample_size)
-  trainData <- training(dataSplit)
-  testData <- testing(dataSplit)
-  splitData<-list(testData,trainData)
-  names(splitData)<-c('test','train')
-  #Train
-  Trainedmodel<-ranger(
-    formula = DxPCR..Blood. ~ .,
-    data=splitData$train,
-    num.trees=500,
-    mtry=optimalModel$mtry,
-    write.forest=FALSE,
-    #treetype='classification', #'regression'
-    min.node.size=optimalModel$node_size,
-    importance= importanceType
-  )
-  #Transform PCAdata to true data explained by incldued principal components
-  #as.matrix(PCAdata[,!(names(PCAdata) %in% c("DxPCR..Blood."))]) %*% t(PCAresult$rotation[,numbers])
-  #Rotate importances to predictor axis
-  PredictorImportance<-t(Trainedmodel$variable.importance) %*% t(PCAresult$rotation[,numbers])
-  observationNames<-attr(PredictorImportance,"dimnames")[[2]]
-  PredVec<-PredictorImportance[1:65]
-  names(PredVec)<-observationNames
-  #sort(PredictorImportance, decreasing=TRUE)
-  #transform Predictor Importance back to data frame
-  PredictorFrame<-data.frame(matrix(ncol = 65, nrow = 0))
-  names(PredictorFrame)<-attr(PredictorImportance,"dimnames")[[2]]
-  PredictorFrame[1,]<-PredictorImportance
-  #names(PredictorImportance)<-names(data[,!(names(data) %in% "DxPCR..Blood.")])
+PCtoObserveImportanceHist<-function(PCAdata,PCAresult,optimalModel,importanceType,PCAnames,numbers){
+  
+  ReducedData<-PCAdata[,names(PCAdata) %in% c("DxPCR..Blood.",PCAnames)]
+  rotation<-PCAresult$rotation[,numbers]
+  
+  PredVec<-GetPredictorImportance(ReducedData,optimalModel,rotation)
   
   PredVec %>%
     tidy() %>%
@@ -297,4 +270,75 @@ GetDataSplit<-function(data,pSplit){
   return(splitData)
 }
 
+MakeBiplot<-function(data,PCAresults,optimalModel,importanceType,PCAnames,numbers){
+  #Hyper-Parameters,
+    dataNum=300 #Plot every 1 in ___ data points
+    predNum=5 #Plot the ____ most important predictors
+  #Extract principal components
+    ##from data
+      ReducedData<-PCAdata[,names(PCAdata) %in% c("DxPCR..Blood.",PCAnames)]
+    ##from rotation
+      rotation<-PCAresult$rotation[,numbers]
+  #Get Predictor Vectors
+    ##Find Predictor Importance
+      PredImportances<-GetPredictorImportance(ReducedData,optimalModel,rotation)
+    ##Get indices of top 15
+      index <- PredImportances>= sort(PredImportances, decreasing=T)[predNum]
+      ###IS IT APPROPRIATE TO TAKE THE ABSOLUTE VALUES
+    ##Scale vector direction by importance
+      PredVectors<-PredImportances*rotation
+
+  
+  #Make Plot
+    biplot(ReducedData[floor(seq(1,nrow(ReducedData),length=dataNum)),!(names(ReducedData) %in%c("DxPCR..Blood."))],
+           PredVectors[index,],
+           var.axes=TRUE,
+           c('green','red'),
+           cex = rep(par("cex"), 2),
+           xlab=PCAnames[1],
+           ylab=PCAnames[2])
+  #Make plot of data points
+    ##Plot every tenth point
+      ###Red Squares for positives, Green Circles for negatives
+    
+  
+    ##Add legend
+    
+  #Add vectors of most important parameters
+    ##Take 10 most important observed predictors
+  
+    ##Translate to vectors in PC space
+      ###Define vector length by importance
+  
+      ###Define vector length by variance
+  
+    
+  
+}
+
+GetPredictorImportance<-function(data,optimalModel,rotation){
+  #Get importance rankings
+  #Split
+  dataSplit <- initial_split(data,prop=optimalModel$sample_size)
+  trainData <- training(dataSplit)
+  testData <- testing(dataSplit)
+  splitData<-list(testData,trainData)
+  names(splitData)<-c('test','train')
+  #Train
+  Trainedmodel<-ranger(
+    formula = DxPCR..Blood. ~ .,
+    data=splitData$train,
+    num.trees=500,
+    mtry=optimalModel$mtry,
+    write.forest=FALSE,
+    #treetype='classification', #'regression'
+    min.node.size=optimalModel$node_size,
+    importance= importanceType
+  )
+  PredictorImportance<-t(Trainedmodel$variable.importance) %*% t(rotation)
+  observationNames<-attr(PredictorImportance,"dimnames")[[2]]
+  PredVec<-PredictorImportance[1:65]
+  names(PredVec)<-observationNames
+  return(PredVec)
+}
 
