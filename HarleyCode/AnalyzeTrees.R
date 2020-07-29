@@ -272,7 +272,7 @@ GetDataSplit<-function(data,pSplit){
 
 MakeBiplot<-function(data,PCAresults,optimalModel,importanceType,PCAnames,numbers){
   #Hyper-Parameters,
-    dataNum=300 #Plot every 1 in ___ data points
+    dataNum=500 #Plot every 1 in ___ data points
     predNum=5 #Plot the ____ most important predictors
   #Extract principal components
     ##from data
@@ -288,15 +288,31 @@ MakeBiplot<-function(data,PCAresults,optimalModel,importanceType,PCAnames,number
     ##Scale vector direction by importance
       PredVectors<-PredImportances*rotation
 
+  #Get Observation Data
+        #Get Subset
+        plotData<-ReducedData[floor(seq(1,nrow(ReducedData),length=dataNum)),]
+        plotPositives<-plotData[which(plotData$DxPCR..Blood.==1),!(names(ReducedData) %in%c("DxPCR..Blood."))]
+        plotNegatives<-plotData[which(plotData$DxPCR..Blood.==0),!(names(ReducedData) %in%c("DxPCR..Blood."))]
   
   #Make Plot
-    biplot(ReducedData[floor(seq(1,nrow(ReducedData),length=dataNum)),!(names(ReducedData) %in%c("DxPCR..Blood."))],
+    biplot(plotData[,!(names(ReducedData) %in%c("DxPCR..Blood."))],
            PredVectors[index,],
            var.axes=TRUE,
-           c('green','red'),
-           cex = rep(par("cex"), 2),
+           c('white','black'),
+           #cex = rep(par("cex"), 2),
            xlab=PCAnames[1],
-           ylab=PCAnames[2])
+           ylab=PCAnames[2],
+           expand=.8)
+    #Plot positives
+    points(plotNegatives[,1],
+           plotNegatives[,2],
+           col='green',
+           pch=16)
+    points(plotPositives[,1],
+           plotPositives[,2],
+           col='red',
+           pch=15)
+    
   #Make plot of data points
     ##Plot every tenth point
       ###Red Squares for positives, Green Circles for negatives

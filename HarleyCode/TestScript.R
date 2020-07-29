@@ -1,9 +1,18 @@
 source("AnalyzeTrees.R")
+#unweighted impurity total error-2 principal components
 optimalModel<-models[models$num_Predictors==2,]
 PCAnames<-predictors[[18]]
 numbers<-c(4,33)
+
+#weighted impurity sensitivity-8 principal components 
+optimalModel<-models[models$num_Predictors==8,]
+PCAnames<-predictors[[12]]
+numbers<-c(49,33,4,38,50,2,17,10 )
 PCtoObserveImportanceHist(PCAdata,PCAresult,optimalModel,importanceType,PCAnames,numbers)
 MakeBiplot(PCAdata,PCAresult,optimalModel,importanceType,PCAnames,numbers)
+
+
+
 
 
 
